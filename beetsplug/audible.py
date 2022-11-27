@@ -50,6 +50,22 @@ class Audible(BeetsPlugin):
         # Mp3tag's mapping: https://docs.mp3tag.de/mapping/
         # Tag Mapping from the Hydrogenaudio Knowledgebase: https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
         # List of M4b tags: https://mutagen.readthedocs.io/en/latest/api/mp4.html
+        primary_artist_asin = mediafile.MediaField(
+            mediafile.MP3DescStorageStyle(u'ASIN'),
+            mediafile.MP4StorageStyle('----:com.apple.iTunes:ASIN'),
+            mediafile.StorageStyle('ASIN'),
+            mediafile.ASFStorageStyle('MusicBrainz/ASIN'),
+        )
+        self.add_media_field('primary_artist_asin', primary_artist_asin)
+        primary_artist = mediafile.MediaField(
+            mediafile.MP3StorageStyle('TPE2'),
+            mediafile.MP4StorageStyle('aART'),
+            mediafile.StorageStyle('ALBUM ARTIST'),
+            mediafile.StorageStyle('ALBUM_ARTIST'),
+            mediafile.StorageStyle('ALBUMARTIST'),
+            mediafile.ASFStorageStyle('WM/AlbumArtist'),
+        )
+        self.add_media_field('primary_artist', primary_artist)
         album_sort = mediafile.MediaField(
             mediafile.MP3StorageStyle("TSOA"),
             mediafile.MP4StorageStyle("soal"),
@@ -347,6 +363,11 @@ class Audible(BeetsPlugin):
             series_position = None
             content_group_description = None
 
+        primary_artist_asin, primary_artist = None, None
+        for a in reversed(book.authors):
+            if a.asin:
+                primary_artist_asin, primary_artist = a.asin, a.name
+
         authors = ", ".join([a.name for a in book.authors])
         narrators = ", ".join([n.name for n in book.narrators])
         authors_and_narrators = ", ".join([authors, narrators])
@@ -360,7 +381,8 @@ class Audible(BeetsPlugin):
         genres = "/".join([g.name for g in book.genres])
 
         common_attributes = {
-            "artist_id": None,
+            "primary_artist_asin": primary_artist_asin,
+            "primary_artist": primary_artist,
             "asin": asin,
             "album_sort": album_sort,
             "composer": narrators,

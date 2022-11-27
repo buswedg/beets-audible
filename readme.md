@@ -20,7 +20,7 @@ This Beets plugin solves both problems.
    ```yaml
    # add audible to the list of plugins
    # copyartifacts is optional but recommended if you're manually specifying metadata via metadata.yml, see the "Importing non-audible content" section
-   plugins: audible copyartifacts edit fromfilename scrub
+   plugins: audible copyartifacts edit fromfilename scrub web
 
    directory: /audiobooks
 
