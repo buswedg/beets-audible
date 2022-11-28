@@ -51,19 +51,11 @@ class Audible(BeetsPlugin):
         # Tag Mapping from the Hydrogenaudio Knowledgebase: https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
         # List of M4b tags: https://mutagen.readthedocs.io/en/latest/api/mp4.html
         primary_artist_asin = mediafile.MediaField(
-            mediafile.MP3DescStorageStyle(u'ASIN'),
-            mediafile.MP4StorageStyle('----:com.apple.iTunes:ASIN'),
-            mediafile.StorageStyle('ASIN'),
-            mediafile.ASFStorageStyle('MusicBrainz/ASIN'),
+            mediafile.StorageStyle('PRIMARYARTISTASIN'),
         )
         self.add_media_field('primary_artist_asin', primary_artist_asin)
         primary_artist = mediafile.MediaField(
-            mediafile.MP3StorageStyle('TPE2'),
-            mediafile.MP4StorageStyle('aART'),
-            mediafile.StorageStyle('ALBUM ARTIST'),
-            mediafile.StorageStyle('ALBUM_ARTIST'),
-            mediafile.StorageStyle('ALBUMARTIST'),
-            mediafile.ASFStorageStyle('WM/AlbumArtist'),
+            mediafile.StorageStyle('PRIMARYARTIST'),
         )
         self.add_media_field('primary_artist', primary_artist)
         album_sort = mediafile.MediaField(
@@ -235,11 +227,15 @@ class Audible(BeetsPlugin):
         else:
             artists = authors
 
+        primary_artist_asin = data.get("primary_artist_asin")
+        primary_artist = data.get("primary_artist")
+
         description = data["description"]
         genres = "/".join(data["genres"])
 
         common_attributes = {
-            "artist_id": None,
+            "primary_artist_asin": primary_artist_asin,
+            "primary_artist": primary_artist,
             "album_sort": album_sort,
             "composer": narrators,
             "grouping": content_group_description,
@@ -363,11 +359,6 @@ class Audible(BeetsPlugin):
             series_position = None
             content_group_description = None
 
-        primary_artist_asin, primary_artist = None, None
-        for a in reversed(book.authors):
-            if a.asin:
-                primary_artist_asin, primary_artist = a.asin, a.name
-
         authors = ", ".join([a.name for a in book.authors])
         narrators = ", ".join([n.name for n in book.narrators])
         authors_and_narrators = ", ".join([authors, narrators])
@@ -375,6 +366,14 @@ class Audible(BeetsPlugin):
             artists = authors_and_narrators
         else:
             artists = authors
+
+        primary_artist_asin, primary_artist = None, None
+        for a in reversed(book.authors):
+            if a.asin and a.name:
+                primary_artist_asin, primary_artist = a.asin, a.name
+
+        if not primary_artist:
+            primary_artist = authors.split(',', 1)[0]
 
         description = book.summary_markdown
         cover_url = book.image_url
@@ -452,11 +451,15 @@ class Audible(BeetsPlugin):
 
     @staticmethod
     def on_write(item, path, tags):
+        tags["primary_artist_asin"] = tags.get("primary_artist_asin")
+        tags["primary_artist"] = tags.get("primary_artist")
+
         # Strip unwanted tags that Beets automatically adds
         tags["mb_albumid"] = None
         tags["mb_trackid"] = None
         tags["lyrics"] = None
         tags["bpm"] = None
+
         if path.endswith(b"m4b"):
             # audiobook media type, see https://exiftool.org/TagNames/QuickTime.html
             tags["desc"] = tags.get("comments")
